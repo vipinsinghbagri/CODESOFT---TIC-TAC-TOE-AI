@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe AI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        #game {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 5px;
+            width: 90vw;
+            max-width: 400px;
+            margin: 20px 0;
+        }
+        .cell {
+            background-color: #fff;
+            border: 2px solid #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .cell:hover {
+            background-color: #eaeaea;
+        }
+        #status {
+            margin-top: 20px;
+            font-size: 1.5em;
+            text-align: center;
+        }
+        #controls {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007BFF;
+            color: white;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .theme-light {
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .theme-dark {
+            background-color: #333;
+            color: #f4f4f4;
+        }
+    </style>
+</head>
+<body class="theme-light">
+    <div>
+        <div id="game"></div>
+        <div id="status">Current Player: X</div>
+        <div id="controls">
+            <button id="restart">Restart Game</button>
+            <button id="changeTheme">Change Theme</button>
+        </div>
+    </div>
+
+    <script>
+        const gameBoard = document.getElementById('game');
+        const statusDisplay = document.getElementById('status');
+        const restartButton = document.getElementById('restart');
+        const changeThemeButton = document.getElementById('changeTheme');
+
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let currentTheme = 'light';
+
+        function createBoard() {
+            gameBoard.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.setAttribute('data-index', i);
+                cell.addEventListener('click', cellClick);
+                gameBoard.appendChild(cell);
+            }
+            updateStatus();
+        }
+
+        function cellClick(event) {
+            const clickedCell = event.target;
+            const clickedCellIndex = clickedCell.getAttribute('data-index');
+
+            if (board[clickedCellIndex] !== '' || !gameActive) {
+                return;
+            }
+
+            handlePlayerMove(clickedCell, clickedCellIndex);
+            if (gameActive) {
+                handleAIMove();
+            }
+        }
+
+        function handlePlayerMove(cell, index) {
+            board[index] = currentPlayer;
+            cell.innerText = currentPlayer;
+            checkWinner();
+        }
+
+        function handleAIMove() {
+            const bestMove = minimax(board, 'O').index;
+            board[bestMove] = 'O';
+            const cell = document.querySelector(`.cell[data-index='${bestMove}']`);
+            cell.innerText = 'O';
+            checkWinner();
+        }
+
+        function checkWinner() {
+            const winningConditions = [
+                [0, 1, 2],
+                [3, 4, 5],
+                [6, 7, 8],
+                [0, 3, 6],
+                [1, 4, 7],
+                [2, 5, 8],
+                [0 , 4, 8],
+                [2, 4, 6],
+            ];
+
+            for (let condition of winningConditions) {
+                const [a, b, c] = condition;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    gameActive = false;
+                    statusDisplay.innerText = `${board[a]} Wins!`;
+                    return;
+                }
+            }
+
+            if (!board.includes('')) {
+                gameActive = false;
+                statusDisplay.innerText = 'It\'s a Draw!';
+            }
+        }
+
+        function minimax(newBoard, player) {
+            const availableSpots = newBoard.reduce((acc, el, index) => {
+                if (el === '') acc.push(index);
+                return acc;
+            }, []);
+
+            if (checkWinnerForMinimax(newBoard, 'O')) {
+                return { score: 10 };
+            } else if (checkWinnerForMinimax(newBoard, 'X')) {
+                return { score: -10 };
+            } else if (availableSpots.length === 0) {
+                return { score: 0 };
+            }
+
+            const moves = [];
+            for (let spot of availableSpots) {
+                const move = {};
+                move.index = spot;
+                newBoard[spot] = player;
+
+                if (player === 'O') {
+                    const result = minimax(newBoard, 'X');
+                    move.score = result.score;
+                } else {
+                    const result = minimax(newBoard, 'O');
+                    move.score = result.score;
+                }
+
+                newBoard[spot] = '';
+                moves.push(move);
+            }
+
+            let bestMove;
+            if (player === 'O') {
+                let bestScore = -Infinity;
+                for (let move of moves) {
+                    if (move.score > bestScore) {
+                        bestScore = move.score;
+                        bestMove = move;
+                    }
+                }
+            } else {
+                let bestScore = Infinity;
+                for (let move of moves) {
+                    if (move.score < bestScore) {
+                        bestScore = move.score;
+                        bestMove = move;
+                    }
+                }
+            }
+
+            return bestMove;
+        }
+
+        function checkWinnerForMinimax(board, player) {
+            const winningConditions = [
+                [0, 1, 2],
+                [3, 4, 5],
+                [6, 7, 8],
+                [0, 3, 6],
+                [1, 4, 7],
+                [2, 5, 8],
+                [0, 4, 8],
+                [2, 4, 6],
+            ];
+
+            for (let condition of winningConditions) {
+                const [a, b, c] = condition;
+                if (board[a] && board[a] === board[b] && board[a] === board[c] && board[a] === player) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        function updateStatus() {
+            if (gameActive) {
+                statusDisplay.innerText = `Current Player: ${currentPlayer}`;
+            }
+        }
+
+        restartButton.addEventListener('click', () => {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+            createBoard();
+        });
+
+        changeThemeButton.addEventListener('click', () => {
+            if (currentTheme === 'light') {
+                document.body.classList.remove('theme-light');
+                document.body.classList.add('theme-dark');
+                currentTheme = 'dark';
+            } else {
+                document.body.classList.remove('theme-dark');
+                document.body.classList.add('theme-light');
+                currentTheme = 'light';
+            }
+        });
+
+        createBoard();
+    </script>
+</body>
+</html>
